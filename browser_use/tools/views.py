@@ -31,6 +31,15 @@ class SearchPageAction(BaseModel):
 	css_scope: str | None = Field(default=None, description='CSS selector to limit search scope (e.g. "div#main")')
 	max_results: int = Field(default=25, description='Maximum matches to return')
 
+class ReadContentAction(BaseModel):
+	"""Action for intelligent reading of long content."""
+
+	goal: str = Field(description='What to look for or extract from the content')
+	source: str = Field(
+		default='page',
+		description='What to read: "page" for current webpage, or a file path',
+	)
+	context: str = Field(default='', description='Additional context about the task')
 
 class FindElementsAction(BaseModel):
 	selector: str = Field(description='CSS selector to query elements (e.g. "table tr", "a.link", "div.product")')
