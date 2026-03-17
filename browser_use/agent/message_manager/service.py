@@ -24,11 +24,11 @@ from browser_use.llm.messages import (
 	SystemMessage,
 	UserMessage,
 )
-from browser_use.observability import observe_debug
+from langfuse import observe, get_client
 from browser_use.utils import match_url_with_domain_pattern, time_execution_sync
 
 logger = logging.getLogger(__name__)
-
+langfuse = get_client()
 
 # ========== Logging Helper Functions ==========
 # These functions are used ONLY for formatting debug log output.
@@ -199,6 +199,7 @@ class MessageManager:
 			self.sensitive_data = effective_sensitive_data
 			self.sensitive_data_description = self._get_sensitive_data_description(browser_state_summary.url)
 
+	@observe(name="maybe_compact_messages", as_type="span")
 	async def maybe_compact_messages(
 		self,
 		llm: BaseChatModel | None,
@@ -209,6 +210,9 @@ class MessageManager:
 
 		Step interval is the primary trigger; char count is a minimum floor.
 		"""
+		# print("Keep last k item:" , settings.keep_last_items)
+		# print("Current step:",step_info.step_number)
+		
 		if not settings or not settings.enabled:
 			return False
 		if llm is None:
@@ -223,9 +227,13 @@ class MessageManager:
 
 		# Char floor gate
 		history_items = self.state.agent_history_items
+	
 		full_history_text = '\n'.join(item.to_string() for item in history_items).strip()
+		# print(full_history_text[:300])
 		trigger_char_count = settings.trigger_char_count or 40000
+		
 		if len(full_history_text) < trigger_char_count:
+			# print("Char count:", len(full_history_text))
 			return False
 
 		logger.debug(f'Compacting message history (items={len(history_items)}, chars={len(full_history_text)})')
@@ -250,10 +258,12 @@ class MessageManager:
 			'Capture task requirements, key facts, decisions, partial progress, errors, and next steps.\n'
 			'Preserve important entities, values, URLs, and file paths.\n'
 			'Return plain text only. Do not include tool calls or JSON.'
+			'If agent is in a loop, suggest alternative paths it can take besides using the original task instructions.'
 		)
 		if settings.summary_max_chars:
 			system_prompt += f' Keep under {settings.summary_max_chars} characters if possible.'
 
+		
 		messages = [SystemMessage(content=system_prompt), UserMessage(content=compaction_input)]
 		try:
 			response = await llm.ainvoke(messages)
@@ -267,6 +277,9 @@ class MessageManager:
 
 		if settings.summary_max_chars and len(summary) > settings.summary_max_chars:
 			summary = summary[: settings.summary_max_chars].rstrip() + '…'
+			
+		with langfuse.start_as_current_observation(as_type="generation", name="summarize_message") as summarize_message:
+			summarize_message.update(input={"messages": messages}, output={"summary":summary})
 
 		self.state.compacted_memory = summary
 		self.state.compaction_count += 1
@@ -402,7 +415,6 @@ class MessageManager:
 
 		return ''
 
-	@observe_debug(ignore_input=True, ignore_output=True, name='create_state_messages')
 	@time_execution_sync('--create_state_messages')
 	def create_state_messages(
 		self,
