@@ -6,7 +6,7 @@ events, ensuring the session pool always reflects the current browser state.
 
 import asyncio
 from typing import TYPE_CHECKING
-
+from langfuse import observe
 from cdp_use.cdp.target import AttachedToTargetEvent, DetachedFromTargetEvent, SessionID, TargetID
 
 from browser_use.utils import create_task_with_error_handling
@@ -207,6 +207,7 @@ class SessionManager:
 		"""
 		return self._session_to_target.get(session_id)
 
+	@observe(name="get_target", as_type="span")
 	def get_target(self, target_id: TargetID) -> 'Target | None':
 		"""Get target from owned data.
 

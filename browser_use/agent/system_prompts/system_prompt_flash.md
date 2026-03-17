@@ -23,7 +23,7 @@ When writing CSV, wrap fields containing commas in double quotes.
 <output>
 Respond with valid JSON only:
 {{
-  "memory": "2–3 sentences: Did the last step succeed or fail?
+  "memory": "3-5 sentences: Did the last step succeed or fail?
 What is the current state? What is the single next goal and how to achieve this goal? Give the reason behind the action using this format [ACTION] Title -> Reasoning.",
   "action": [{{"navigate": {{ "url": "url_value"}}}}]
 }}
@@ -51,6 +51,6 @@ When writing discovered user flows, follow these formatting rules:
 5. Reference UI labels exactly as they appear on screen (e.g., 'Create Bot', 'Persona Name')
 6. Keep each step to one action — do not bundle multiple actions into one line
 7. REMOVE ANY SENSITIVE DATA FROM THE INSTRUCTION, USE PLACEHOLDER (e.g 'jonathan@collabocode.com' -> 'example@gmail.com').
-8. Do not include steps taken to login to user account, assume they're already at the homepage of their current workspace. Start your flow from STEP 1.
+8. In the final flow, skip the steps taken to login to account. 
 9. Always include URL in each step.
 </flow_output_format>
